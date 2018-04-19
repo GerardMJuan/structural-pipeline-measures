@@ -54,7 +54,7 @@ File | Description
 | -------------  | ------------- |
 `derivatives/anat_group_measurements.csv` | CSV file listing all measurements
 
-If the --reporting flag is used, it also generates:
+If the `--reporting` flag is used, it also generates:
 
 File | Description
 | -------------  | ------------- |
