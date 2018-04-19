@@ -1,5 +1,14 @@
 #!/bin/bash
 
+# set -x
+
+set -e
+
+# if DRAWEMDIR is not defined, assume we need to read the pipeline params 
+if [ -z ${DRAWEMDIR+x} ]; then
+  . /usr/src/structural-pipeline/parameters/path.sh
+fi
+
 # if FSLDIR is not defined, assume we need to read the FSL startup
 if [ -z ${FSLDIR+x} ]; then
   if [ ! -f /etc/fsl/fsl.sh ]; then
@@ -13,25 +22,25 @@ fi
 usage()
 {
   base=$(basename "$0")
-  echo "usage: $base derivatives_dir dataset_csv [options]
-This script computes the different measurements for the dHCP structural pipeline,
- and if specified creates pdf reports for the subjects (option --QC).
+  echo "usage: $base /path/to/participants.tsv [options]
+
+This script computes the different measurements for the dHCP structural 
+pipeline and, if requested, creates pdf reports for the subjects (option 
+--reporting).
 
 Arguments:
-  derivatives_dir               The derivatives directory created from the structural pipeline.
-                                The script additionally creates a pdf report for the subjects specified in the <csv> file.
-  dataset_csv                   The dataset_csv file is a comma-delimited file with a line for each subject session:
-                                   <subjectID>, <sessionID>, <age>
-                                e.g.
-                                   subject-1, session-1, 32
-                                   subject-1, session-2, 44
-                                          ...
-                                   subject-N, session-1, 36
+  participants.tsv              A tab-separated values file containing columns
+                                for participant_id, session_id, gender and PMA
+                                age in weeks.
+
+                                The participants.tsv must be in the same
+                                directory as the derivatives directory made by
+                                the structural pipeline.
 
 Options:
-  --reporting                   The script will additionally create a pdf report for each subject, and a group report.    
+  --reporting                   The script will additionally create a pdf 
+                                report for each subject, and a group report.    
   -t / -threads  <number>       Number of threads (CPU cores) used (default: 1)
-  -d / -data-dir  <directory>   The directory used to run the script and output the files. 
   -h / -help / --help           Print usage.
 "
   exit;
@@ -39,21 +48,26 @@ Options:
 
 ################ ARGUMENTS ################
 
-[ $# -ge 2 ] || { usage; }
-command=$@
-derivatives_dir=$1
-dataset_csv=$2
+if [ $# -lt 2 ]; then 
+  usage
+fi
 
 QC=0
 threads=1
-datadir=`pwd`
+command="$@"
+participants_tsv="$1"
+shift
+datadir="$( cd "$( dirname "$participants_tsv" )" && pwd )"
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/scripts
+derivatives_dir="$datadir/derivatives"
+reportsdir=$datadir/reports
+workdir=$reportsdir/workdir
+logdir=$datadir/logs
+mkdir -p $logdir
 
-shift; shift;
 while [ $# -gt 0 ]; do
   case "$1" in
     --reporting)  QC=1; ;;
-    -d|-data-dir)  shift; datadir=$1; ;;
     -t|-threads)  shift; threads=$1; ;;
     -h|-help|--help) usage; ;;
     -*) echo "$0: Unrecognized option $1" >&2; usage; ;;
@@ -63,33 +77,53 @@ while [ $# -gt 0 ]; do
 done
 
 echo "Reporting for the dHCP pipeline
-Derivatives directory:  $derivatives_dir 
-Dataset CSV:            $dataset_csv
-datadir:            	$datadir
-QC (reporting): 	$QC
+
+Derivatives directory: $derivatives_dir
+participants.tsv:      $participants_tsv
+datadir:               $datadir
+scriptdir:             $scriptdir
+reportsdir:            $reportsdir
+logdir:                $logdir
+reporting:             $QC
 
 $BASH_SOURCE $command
 ----------------------------"
 
+if [ ! -f $participants_tsv ]; then
+  echo tsv file $participants_tsv not found
+  exit 1
+fi
 
-reportsdir=$datadir/reports
-workdir=$reportsdir/workdir
-logdir=$datadir/logs
-mkdir -p $logdir
+if [ ! -d $derivatives_dir ]; then
+  echo directory $derivatives_dir not found
+  exit 1
+fi
+
 
 
 ################ MEASURES PIPELINE ################
 
 echo "computing volume/surface measurements of subjects..."
-while read line; do
-  s=`echo $line | cut -d',' -f1 | sed -e 's:sub-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  e=`echo $line | cut -d',' -f2 | sed -e 's:ses-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  a=`echo $line | cut -d',' -f3 | sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  echo "$s $e"
-  $scriptdir/compute-measurements.sh $s $e $derivatives_dir/sub-$s/ses-$e/anat -d $workdir > $logdir/$s-$e-measures.log 2> $logdir/$s-$e-measures.err
-done < $dataset_csv
-echo ""
 
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  columns=($line)
+  subject=${columns[0]}
+  session=${columns[1]}
+  gender=${columns[2]}
+  age=${columns[3]}
+  if [ $subject = participant_id ]; then
+    # header line
+    continue
+  fi
+
+  cmd="$scriptdir/compute-measurements.sh $subject $session \
+        $derivatives_dir/sub-$subject/ses-$session/anat \
+        -d $workdir"
+  echo $cmd
+  $cmd > $logdir/$subject-$session-measures.log \
+      2> $logdir/$subject-$session-measures.err
+
+done < $participants_tsv
 
 
 # gather measures
@@ -98,7 +132,12 @@ measfile=$reportsdir/pipeline_all_measures.csv
 rm -f $measfile
 
 # measures
-stats="volume volume-tissue-regions rel-volume-tissue-regions volume-all-regions rel-volume-all-regions thickness thickness-regions sulc sulc-regions curvature curvature-regions GI GI-regions surface-area surface-area-regions rel-surface-area-regions"
+stats="
+  volume volume-tissue-regions rel-volume-tissue-regions 
+  volume-all-regions rel-volume-all-regions thickness thickness-regions 
+  sulc sulc-regions curvature curvature-regions GI GI-regions surface-area 
+  surface-area-regions rel-surface-area-regions
+"
 typeset -A name
 
 # header
@@ -121,19 +160,27 @@ done
 
 # measurements
 echo "$header"> $measfile
-while read line; do
-  s=`echo $line | cut -d',' -f1 | sed -e 's:sub-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  e=`echo $line | cut -d',' -f2 | sed -e 's:ses-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  a=`echo $line | cut -d',' -f3 | sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  subj="sub-${s}_ses-$e"
-  line="$s,$e,$a"
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  columns=($line)
+  subject=${columns[0]}
+  session=${columns[1]}
+  gender=${columns[2]}
+  age=${columns[3]}
+  if [ $subject = participant_id ]; then
+    # header line
+    continue
+  fi
+
+  subj="sub-${subject}_ses-$session"
+  line="$subject,$session,$age"
   for c in ${stats};do
     if [ -f $workdir/$subj/$subj-$c ]; then 
       line="$line,"`cat $workdir/$subj/$subj-$c |sed -e 's: :,:g' `
     fi
   done
   echo "$line" |sed -e 's: :,:g' >> $measfile
-done < $dataset_csv
+
+done < $participants_tsv
 
 
 echo "completed volume/surface measurements"
@@ -141,55 +188,99 @@ echo "completed volume/surface measurements"
 
 ################ REPORTS PIPELINE ################
 
-if  [ $QC -eq 0 ];then exit;fi
+if [ $QC -eq 0 ]; then 
+  exit
+fi
 
 echo "----------------------------
 "
 
 echo "computing QC measurements for subjects..."
 
-subjs=""
-while read line; do
-  s=`echo $line | cut -d',' -f1 | sed -e 's:sub-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  e=`echo $line | cut -d',' -f2 | sed -e 's:ses-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  a=`echo $line | cut -d',' -f3 | sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  subj="sub-${s}_ses-$e"
-  echo "$s $e"
-  $scriptdir/compute-QC-measurements.sh $s $e $a $derivatives_dir/sub-$s/ses-$e/anat -d $workdir >> $logdir/$s-$e-measures.log 2>> $logdir/$s-$e-measures.err
-  subjs="$subjs $subj"
-done < $dataset_csv
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  columns=($line)
+  subject=${columns[0]}
+  session=${columns[1]}
+  gender=${columns[2]}
+  age=${columns[3]}
+  if [ $subject = participant_id ]; then
+    # header line
+    continue
+  fi
+
+  subj="sub-${subject}_ses-$session"
+
+  cmd="$scriptdir/compute-QC-measurements.sh $subject $session $age \
+        $derivatives_dir/sub-$subject/ses-$session/anat -d $workdir"
+  echo $cmd
+  $cmd \
+        >> $logdir/$subject-$session-measures.log \
+        2>> $logdir/$subject-$session-measures.err
+
+done < $participants_tsv
 echo ""
 
 # gather measures
 echo "gathering QC measurements of subjects..."
 
-for json in dhcp-measurements.json qc-measurements.json;do
+for json in dhcp-measurements.json qc-measurements.json; do
   echo "{\"data\":[" > $reportsdir/$json
   first=1
-  for subj in ${subjs};do
-    files=`ls $workdir/$subj/*$json`
-    for f in ${files};do 
+  while IFS='' read -r line || [[ -n "$line" ]]; do
+    columns=($line)
+    subject=${columns[0]}
+    session=${columns[1]}
+    gender=${columns[2]}
+    age=${columns[3]}
+    if [ $subject = participant_id ]; then
+      # header line
+      continue
+    fi
+
+    files=`ls $workdir/sub-${subject}_ses-${session}/*$json`
+    for f in $files; do 
       line=`cat $f`
-      if [ $first -eq 1 ];then first=0; else line=",$line";fi
+      if [ $first -eq 1 ]; then 
+        first=0
+      else 
+        line=",$line"
+      fi
+
       echo $line >> $reportsdir/$json
     done
-  done < $dataset_csv
+  done < $participants_tsv
   echo "]}" >> $reportsdir/$json
 done
 
 # create reports
 echo "creating QC reports..."
-structural_dhcp_mriqc -o $reportsdir -w $workdir --dhcp-measures $reportsdir/dhcp-measurements.json --qc-measures $reportsdir/qc-measurements.json --nthreads $threads >> $logdir/$s-$e-measures.log 2>> $logdir/$s-$e-measures.err
+structural_dhcp_mriqc -o $reportsdir -w $workdir \
+  --dhcp-measures $reportsdir/dhcp-measurements.json \
+  --qc-measures $reportsdir/qc-measurements.json \
+  --nthreads $threads \
+  >> $logdir/qc.log \
+  2>> $logdir/qc.err
 
 
 echo "copying reports..."
-while read line; do
-  s=`echo $line | cut -d',' -f1 | sed -e 's:sub-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  e=`echo $line | cut -d',' -f2 | sed -e 's:ses-::g' |sed 's/[[:blank:]]*$//' | sed 's/^[[:blank:]]*//' `
-  cp $reportsdir/anatomical_${s}.pdf $derivatives_dir/sub-$s/ses-$e/anat/sub-${s}_ses-${e}_qc.pdf
-done < $dataset_csv
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  columns=($line)
+  subject=${columns[0]}
+  session=${columns[1]}
+  gender=${columns[2]}
+  age=${columns[3]}
+  if [ $subject = participant_id ]; then
+    # header line
+    continue
+  fi
+
+  cp $reportsdir/anatomical_${subject}.pdf \
+    $derivatives_dir/sub-$subject/ses-$session/anat/sub-${subject}_ses-${session}_qc.pdf
+
+done < $participants_tsv
 
 cp $reportsdir/anatomical_group.pdf $derivatives_dir/anat_group.pdf
 cp $reportsdir/anatomical_group_stats.pdf $derivatives_dir/anat_group_qc.pdf
 cp $reportsdir/pipeline_all_measures.csv $derivatives_dir/anat_group_measurements.csv
+
 echo "completed QC reports"

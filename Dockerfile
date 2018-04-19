@@ -11,8 +11,7 @@
 ## - Push image using "docker push <user>/structural-pipeline:latest"
 ##
 
-ARG USER=john
-FROM ${USER}/structural-pipeline
+FROM biomedia/dhcp-structural-pipeline:latest
 MAINTAINER John Cupitt <jcupitt@gmail.com>
 LABEL Description="dHCP structural-pipeline measure and report" Vendor="BioMedIA"
 
@@ -20,7 +19,7 @@ LABEL Description="dHCP structural-pipeline measure and report" Vendor="BioMedIA
 # (see https://microbadger.com/#/labels)
 ARG VCS_REF
 LABEL org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.vcs-url="https://github.com/amakropoulos/structural-pipeline-measures"
+      org.label-schema.vcs-url="https://github.com/jcupitt/structural-pipeline-measures"
 
 RUN apt-get install -y \
 	python3-pip
@@ -72,4 +71,8 @@ RUN cd /usr/src/structural-pipeline-measures \
     && pip3 install packages/structural_dhcp_svg2rlg-0.3/ \
     && pip3 install packages/structural_dhcp_rst2pdf-aquavitae/ \
     && pip3 install packages/structural_dhcp_mriqc/ 
+
+WORKDIR /data 
+ENTRYPOINT ["/usr/src/structural-pipeline-measures/pipeline.sh"]
+CMD ["-help"]
 
