@@ -16,7 +16,7 @@ The measurements include:
 ## License
 
 The measurements/reporting dHCP structural pipeline are distributed under
-the terms outlined in LICENSE.txt
+the terms outlined in [LICENSE.txt](LICENSE.txt).
 
 ## Install and run with docker
 
@@ -31,18 +31,18 @@ Then enter:
 $ docker run --rm -t -v $PWD/data:/data \
     -u $(id -u):$(id -g) \
     biomedia/dhcp-structural-pipeline-measures:latest \
-        /data/participants.tsv --reporting"
+        /data/participants.tsv --reporting
 ```
 
 This will mount the subdirectory `data` of
 your current directory as `/data` in the container, then execute the tool
-on the output of `structural-pipeline` in that directory. 
+on the output of `dhcp-structural-pipeline` in that directory. 
 
 The file `participants.tsv` should list the scans to process. For example:
 
 ```
-participant_id	session_id  gender	birth_ga
-subject1	      session1    Female	44.0
+participant_id  session_id  gender  birth_ga
+subject1        session1    Female  44.0
 ```
 
 The directory containing the `participants.tsv` file should be in the standard
@@ -50,12 +50,14 @@ layout for the pipeline.
 
 This script creates:
 
-| -------------  |:-------------:|
+File | Description
+| -------------  | :-------------: |
 `derivatives/anat_group_measurements.csv` | CSV file listing all measurements
 
 If the --reporting flag is used, it also generates:
 
-| -------------  |:-------------:|
+File | Description
+| -------------  | :-------------: |
 `derivatives/anat_group.pdf` | PDF that specifies the sessions included
 `derivatives/anat_group_qc.pdf` | PDF report for all the sessions
 `derivatives/sub-*/ses-*/anat/sub-*_ses-*_qc.pdf` | PDF report for each session
