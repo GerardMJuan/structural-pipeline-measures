@@ -51,13 +51,13 @@ layout for the pipeline.
 This script creates:
 
 File | Description
-| -------------  | :-------------: |
+| -------------  | ------------- |
 `derivatives/anat_group_measurements.csv` | CSV file listing all measurements
 
 If the --reporting flag is used, it also generates:
 
 File | Description
-| -------------  | :-------------: |
+| -------------  | ------------- |
 `derivatives/anat_group.pdf` | PDF that specifies the sessions included
 `derivatives/anat_group_qc.pdf` | PDF report for all the sessions
 `derivatives/sub-*/ses-*/anat/sub-*_ses-*_qc.pdf` | PDF report for each session
