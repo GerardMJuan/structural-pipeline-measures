@@ -25,6 +25,12 @@ of any platform, is automated, and fairly simple. First, install docker:
 
 https://docs.docker.com/engine/installation/
 
+Pull the latest version of the QC image:
+
+```
+$ docker pull biomedia/dhcp-structural-pipeline-measures:latest
+```
+
 Then enter:
 
 ```
