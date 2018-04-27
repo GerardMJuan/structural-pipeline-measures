@@ -68,13 +68,22 @@ scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # do the volume-based measurements
 super_structures=$scriptdir/../label_names/super-structures.csv
 
-if [ ! -f $subj/$subj-rel-volume-all-regions ];then 
+if [ ! -f $subj/$subj-rel-volume-all-regions ]; then 
   run $scriptdir/volume-measurements.sh $subj $anatDir $subj/$subj $super_structures
 fi
 
-if [ ! -f $subj/$subj-curvature-regions ];then 
-  if [ ! -f $surfdir/${subj}_left_white.surf.gii ];then echo "The left WM surface for subject $subj doesn't exist"; exit;fi
-  if [ ! -f $surfdir/${subj}_right_white.surf.gii ];then echo "The right WM surface for subject $subj doesn't exist"; exit;fi
+if [ ! -f $subj/$subj-curvature-regions ]; then 
+  if [ ! -f $surfdir/${subj}_left_white.surf.gii ]; then 
+    echo "file $surfdir/${subj}_left_white.surf.gii not found"
+    echo "The left WM surface for subject $subj doesn't exist"
+    exit
+  fi
+
+  if [ ! -f $surfdir/${subj}_right_white.surf.gii ]; then 
+    echo "file $surfdir/${subj}_right_white.surf.gii not found"
+    echo "The right WM surface for subject $subj doesn't exist"
+    exit
+  fi
 
   # gather all measurements into a single file
   if [ ! -f $rdir/${subj}_white.surf.vtk ];then

@@ -2,8 +2,6 @@
 
 # set -x
 
-set -e
-
 # if DRAWEMDIR is not defined, assume we need to read the pipeline params 
 if [ -z ${DRAWEMDIR+x} ]; then
   . /usr/src/structural-pipeline/parameters/path.sh
@@ -254,12 +252,16 @@ done
 
 # create reports
 echo "creating QC reports..."
-structural_dhcp_mriqc -o $reportsdir -w $workdir \
-  --dhcp-measures $reportsdir/dhcp-measurements.json \
-  --qc-measures $reportsdir/qc-measurements.json \
-  --nthreads $threads \
-  >> $logdir/qc.log \
-  2>> $logdir/qc.err
+cmd="structural_dhcp_mriqc -o $reportsdir -w $workdir 
+  --dhcp-measures $reportsdir/dhcp-measurements.json 
+  --qc-measures $reportsdir/qc-measurements.json 
+  --nthreads $threads"
+# echo "running: $cmd"
+$cmd >> $logdir/qc.log 2>> $logdir/qc.err
+if [ ! $? -eq 0 ]; then
+  echo $cmd failed
+  exit 1
+fi
 
 
 echo "copying reports..."
