@@ -28,8 +28,7 @@ pipeline and, if requested, creates pdf reports for the subjects (option
 
 Arguments:
   participants.tsv              A tab-separated values file containing columns
-                                for participant_id, session_id, gender and PMA
-                                age in weeks.
+                                for participant_id, gender and PMA age in weeks.
 
                                 The participants.tsv must be in the same
                                 directory as the derivatives directory made by
@@ -106,20 +105,24 @@ echo "computing volume/surface measurements of subjects..."
 while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
-  session=${columns[1]}
-  gender=${columns[2]}
-  age=${columns[3]}
+  gender=${columns[1]}
+  age=${columns[2]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
-  cmd="$scriptdir/compute-measurements.sh $subject $session \
-        $derivatives_dir/sub-$subject/ses-$session/anat \
-        -d $workdir"
-  echo $cmd
-  $cmd > $logdir/$subject-$session-measures.log \
-      2> $logdir/$subject-$session-measures.err
+  for session_path in $derivatives_dir/sub-$subject/ses-*; do
+    ses_session=$(basename $session_path)
+    session=${ses_session#ses-}
+
+    cmd="$scriptdir/compute-measurements.sh $subject $session \
+          $derivatives_dir/sub-$subject/ses-$session/anat \
+          -d $workdir"
+    echo $cmd
+    $cmd > $logdir/$subject-$session-measures.log \
+        2> $logdir/$subject-$session-measures.err
+  done
 
 done < $participants_tsv
 

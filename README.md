@@ -47,8 +47,8 @@ on the output of `dhcp-structural-pipeline` in that directory.
 The file `participants.tsv` should list the scans to process. For example:
 
 ```
-participant_id  session_id  gender  birth_ga
-subject1        session1    Female  44.0
+participant_id  gender  birth_ga
+subject1        Female  44.0
 ```
 
 The directory containing the `participants.tsv` file should be in the standard
