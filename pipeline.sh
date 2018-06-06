@@ -97,10 +97,10 @@ if [ ! -d $derivatives_dir ]; then
 fi
 
 
+################ CHECK PARTICIPANTS ################
 
-################ MEASURES PIPELINE ################
-
-echo "computing volume/surface measurements of subjects..."
+echo -e "participant_id\tsession_id\tgender\tbirth_ga" \
+  > $datadir/qc_participants.tsv
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
@@ -112,19 +112,53 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
     continue
   fi
 
+  if [ ! -d $derivatives_dir/sub-$subject ]; then
+    echo $derivatives_dir/sub-$subject not found
+    echo subject $subject listed in participants.tsv does not exist
+    continue
+  fi
+
   for session_path in $derivatives_dir/sub-$subject/ses-*; do
     ses_session=$(basename $session_path)
     session=${ses_session#ses-}
 
-    cmd="$scriptdir/compute-measurements.sh $subject $session \
-          $derivatives_dir/sub-$subject/ses-$session/anat \
-          -d $workdir"
-    echo $cmd
-    $cmd > $logdir/$subject-$session-measures.log \
-        2> $logdir/$subject-$session-measures.err
+    if [ ! -d $derivatives_dir/sub-$subject/ses-$session ]; then
+      echo $derivatives_dir/sub-$subject/ses-$session not found
+      echo session does not exist
+      continue
+    fi
+
+    echo -e "${subject}\t${session}\t${gender}\t${age}" \
+      >> $datadir/qc_participants.tsv
+
   done
 
 done < $participants_tsv
+
+
+################ MEASURES PIPELINE ################
+
+echo "computing volume/surface measurements of subjects..."
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+  columns=($line)
+  subject=${columns[0]}
+  session=${columns[1]}
+  gender=${columns[2]}
+  age=${columns[3]}
+  if [ $subject = participant_id ]; then
+    # header line
+    continue
+  fi
+
+  cmd="$scriptdir/compute-measurements.sh $subject $session \
+        $derivatives_dir/sub-$subject/ses-$session/anat \
+        -d $workdir"
+  echo $cmd
+  $cmd > $logdir/$subject-$session-measures.log \
+      2> $logdir/$subject-$session-measures.err
+
+done < $datadir/qc_participants.tsv
 
 
 # gather measures
@@ -175,13 +209,13 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   subj="sub-${subject}_ses-$session"
   line="$subject,$session,$age"
   for c in ${stats};do
-    if [ -f $workdir/$subj/$subj-$c ]; then 
-      line="$line,"`cat $workdir/$subj/$subj-$c |sed -e 's: :,:g' `
+    if [ -f $workdir/$subject/$subject-$c ]; then 
+      line="$line,"`cat $workdir/$subject/$subject-$c |sed -e 's: :,:g' `
     fi
   done
   echo "$line" |sed -e 's: :,:g' >> $measfile
 
-done < $participants_tsv
+done < $datadir/qc_participants.tsv
 
 
 echo "completed volume/surface measurements"
@@ -218,7 +252,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
         >> $logdir/$subject-$session-measures.log \
         2>> $logdir/$subject-$session-measures.err
 
-done < $participants_tsv
+done < $datadir/qc_participants.tsv
 echo ""
 
 # gather measures
@@ -249,7 +283,8 @@ for json in dhcp-measurements.json qc-measurements.json; do
 
       echo $line >> $reportsdir/$json
     done
-  done < $participants_tsv
+
+  done < $datadir/qc_participants.tsv
   echo "]}" >> $reportsdir/$json
 done
 
@@ -282,7 +317,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   cp $reportsdir/anatomical_${subject}.pdf \
     $derivatives_dir/sub-$subject/ses-$session/anat/sub-${subject}_ses-${session}_qc.pdf
 
-done < $participants_tsv
+done < $datadir/qc_participants.tsv
 
 cp $reportsdir/anatomical_group.pdf $derivatives_dir/anat_group.pdf
 cp $reportsdir/anatomical_group_stats.pdf $derivatives_dir/anat_group_qc.pdf
