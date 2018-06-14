@@ -51,6 +51,15 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+echo ""
+echo "compute-measurements.sh: starting"
+echo "   subjID = $subjID"
+echo "   sessionID = $sessionID"
+echo "   anatDir = $anatDir"
+echo "   datadir = $datadir"
+echo ""
+
+
 
 mkdir -p $datadir
 cd $datadir

@@ -1,4 +1,5 @@
 #!/bin/bash
+
 subj=$1
 anatDir=$2
 outpre=$3
@@ -7,6 +8,15 @@ if [ $# -gt 3 ];then super=$4; fi
 
 
 
+run(){
+  echo "$@" 
+  "$@"
+  if [ ! $? -eq 0 ]; then
+    echo " failed: see log file $err for details"
+    exit 1
+  fi
+}
+
 super_vol=""
 super_all_vol=""
 if [ "$super" != "" ];then 
@@ -14,7 +24,12 @@ if [ "$super" != "" ];then
   for s in ${supstructures};do
     for col in {2..5};do
       substructures=`cat $super | grep "^$s "|cut -d' ' -f $col`
-      mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz `echo $substructures | wc -w` $substructures 0 -invert
+      run mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz `echo $substructures | wc -w` $substructures 0 -invert
+      if [ ! -f $outpre-temp.nii.gz ]; then
+	      echo output not found
+	      echo pwd = $PWD
+	      exit 1
+      fi
       vol[$col]=`fslstats $outpre-temp.nii.gz -V|cut -d' ' -f2`
     done
     vol[0]=`echo "scale=3; ${vol[2]}+${vol[4]}" | /usr/bin/bc`
@@ -24,7 +39,7 @@ if [ "$super" != "" ];then
   done
 fi
 
-mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz 4 49 50 83 84 0
+run mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz 4 49 50 83 84 0
 vol=`fslstats $outpre-temp.nii.gz -V|cut -d' ' -f2`
 echo $vol > $outpre-volume
 rm $outpre-temp.nii.gz

@@ -45,7 +45,7 @@ Options:
 
 ################ ARGUMENTS ################
 
-if [ $# -lt 2 ]; then 
+if [ $# -lt 1 ]; then 
   usage
 fi
 
@@ -113,8 +113,17 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   fi
 
   if [ ! -d $derivatives_dir/sub-$subject ]; then
-    echo $derivatives_dir/sub-$subject not found
-    echo subject $subject listed in participants.tsv does not exist
+    echo $subject not found $derivatives_dir/sub-$subject 
+    continue
+  fi
+
+  if [ $gender != Male ] && [ $gender != Female ]; then
+    echo $subject bad gender $gender
+    continue
+  fi
+
+  if ! [[ $age =~ ^[0-9]+\.[0-9]+$ ]]; then
+    echo $subject bad age $age
     continue
   fi
 
@@ -123,8 +132,13 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
     session=${ses_session#ses-}
 
     if [ ! -d $derivatives_dir/sub-$subject/ses-$session ]; then
-      echo $derivatives_dir/sub-$subject/ses-$session not found
-      echo session does not exist
+      echo $subject not found $derivatives_dir/sub-$subject/ses-$session 
+      continue
+    fi
+
+    T1=sub-${subject}_ses-${session}_T1w.nii.gz
+    if [ ! -f $derivatives_dir/sub-$subject/ses-$session/anat/$T1 ]; then
+      echo $subject no T1 for session $session
       continue
     fi
 

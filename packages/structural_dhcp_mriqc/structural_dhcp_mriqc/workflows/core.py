@@ -23,7 +23,7 @@ from nipype.interfaces import utility as niu
 #     new_list =
 
 def get_vars(list, subject_id, session_id, run_id):
-    return list[subject_id+"_"+session_id+"_"+run_id]
+    return list[subject_id + '_' + session_id + '_' + run_id]
 
 from .anatomical import anat_qc_workflow_dhcp
 def ms_anat_dhcp(settings=None, subject_id=None, session_id=None, run_id=None):

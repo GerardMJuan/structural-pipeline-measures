@@ -1,4 +1,5 @@
 #!/bin/bash
+
 f=$1
 hull=$2
 outpre=$3

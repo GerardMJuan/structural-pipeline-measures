@@ -91,9 +91,9 @@ The measurement scripts do not require installation.
 The reporting (optional) can be installed as follows:
 
 ```
-$ pip install packages/structural_dhcp_svg2rlg-0.3/
-$ pip install packages/structural_dhcp_rst2pdf-aquavitae/
-$ pip install packages/structural_dhcp_mriqc/
+$ pip install packages/structural_dhcp_svg2rlg-0.3 --user
+$ pip install packages/structural_dhcp_rst2pdf-aquavitae --user
+$ pip install packages/structural_dhcp_mriqc --user
 ```
 
 ## Run
