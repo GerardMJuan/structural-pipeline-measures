@@ -29,12 +29,14 @@ RUN pip3 install --upgrade pip
 # install them now to speed up structural-pipeline-measure install later
 #
 # nipype insists on prov 1.5.0
+# 
+# pandas-0.23.0 breaks with py-3.5.2 ... stick with 0.22.0 for now
 RUN pip3 install --upgrade \
 	h5py==2.6.0 \
 	mock \
 	numpy \
 	six \
-	pandas \
+	pandas==0.22.0 \
 	nitime \
 	dipy \
 	lockfile \
