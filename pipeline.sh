@@ -28,7 +28,7 @@ pipeline and, if requested, creates pdf reports for the subjects (option
 
 Arguments:
   participants.tsv              A tab-separated values file containing columns
-                                for participant_id, gender and PMA age in weeks.
+                                for participant_id, gender and birth_ga in weeks.
 
                                 The participants.tsv must be in the same
                                 directory as the derivatives directory made by
@@ -58,6 +58,7 @@ datadir="$( cd "$( dirname "$participants_tsv" )" && pwd )"
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/scripts
 derivatives_dir="$datadir/derivatives"
 reportsdir="$datadir/reports"
+qc_participants_tsv="$reportsdir/qc_participants.tsv"
 workdir="$reportsdir/workdir"
 logdir="$datadir/logs"
 mkdir -p $logdir
@@ -100,13 +101,13 @@ fi
 ################ CHECK PARTICIPANTS ################
 
 echo -e "participant_id\tsession_id\tgender\tbirth_ga" \
-  > $datadir/qc_participants.tsv
+  > $qc_participants_tsv
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
   gender=${columns[1]}
-  age=${columns[2]}
+  birth_ga=${columns[2]}
   if [ $subject = participant_id ]; then
     # header line
     continue
@@ -122,8 +123,8 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
     continue
   fi
 
-  if ! [[ $age =~ ^[0-9]+\.[0-9]+$ ]]; then
-    echo $subject bad age $age
+  if ! [[ $birth_ga =~ ^[0-9]+\.[0-9]+$ ]]; then
+    echo $subject bad birth_ga $birth_ga
     continue
   fi
 
@@ -136,14 +137,15 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
       continue
     fi
 
+
     T1=sub-${subject}_ses-${session}_T1w.nii.gz
     if [ ! -f $derivatives_dir/sub-$subject/ses-$session/anat/$T1 ]; then
       echo $subject no T1 for session $session
       continue
     fi
 
-    echo -e "${subject}\t${session}\t${gender}\t${age}" \
-      >> $datadir/qc_participants.tsv
+    echo -e "${subject}\t${session}\t${gender}\t${birth_ga}" \
+      >> $qc_participants_tsv
 
   done
 
@@ -159,7 +161,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   subject=${columns[0]}
   session=${columns[1]}
   gender=${columns[2]}
-  age=${columns[3]}
+  birth_ga=${columns[3]}
   if [ $subject = participant_id ]; then
     # header line
     continue
@@ -172,7 +174,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   $cmd > $logdir/$subject-$session-measures.log \
       2> $logdir/$subject-$session-measures.err
 
-done < $datadir/qc_participants.tsv
+done < $qc_participants_tsv
 
 
 # gather measures
@@ -191,7 +193,7 @@ typeset -A name
 
 # header
 lbldir=$scriptdir/../label_names
-header="subject ID, session ID, age at scan"
+header="subject ID, session ID, birth_ga"
 for c in ${stats}; do
   if [[ $c == *"tissue-regions"* ]];then labels=$lbldir/tissue_labels.csv 
   elif [[ $c == *"all-regions"* ]];then labels=$lbldir/all_labels.csv
@@ -214,14 +216,14 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   subject=${columns[0]}
   session=${columns[1]}
   gender=${columns[2]}
-  age=${columns[3]}
+  birth_ga=${columns[3]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
   subj="sub-${subject}_ses-$session"
-  line="$subject,$session,$age"
+  line="$subject,$session,$birth_ga"
   for c in ${stats};do
     if [ -f $workdir/$subject/$subject-$c ]; then 
       line="$line,"`cat $workdir/$subject/$subject-$c |sed -e 's: :,:g' `
@@ -229,7 +231,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   done
   echo "$line" |sed -e 's: :,:g' >> $measfile
 
-done < $datadir/qc_participants.tsv
+done < $qc_participants_tsv
 
 
 echo "completed volume/surface measurements"
@@ -251,7 +253,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   subject=${columns[0]}
   session=${columns[1]}
   gender=${columns[2]}
-  age=${columns[3]}
+  birth_ga=${columns[3]}
   if [ $subject = participant_id ]; then
     # header line
     continue
@@ -259,14 +261,14 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 
   subj="sub-${subject}_ses-$session"
 
-  cmd="$scriptdir/compute-QC-measurements.sh $subject $session $age \
+  cmd="$scriptdir/compute-QC-measurements.sh $subject $session $birth_ga \
         $derivatives_dir/sub-$subject/ses-$session/anat -d $workdir"
   echo $cmd
   $cmd \
         >> $logdir/$subject-$session-measures.log \
         2>> $logdir/$subject-$session-measures.err
 
-done < $datadir/qc_participants.tsv
+done < $qc_participants_tsv
 echo ""
 
 # gather measures
@@ -280,7 +282,7 @@ for json in dhcp-measurements.json qc-measurements.json; do
     subject=${columns[0]}
     session=${columns[1]}
     gender=${columns[2]}
-    age=${columns[3]}
+    birth_ga=${columns[3]}
     if [ $subject = participant_id ]; then
       # header line
       continue
@@ -298,7 +300,7 @@ for json in dhcp-measurements.json qc-measurements.json; do
       echo $line >> $reportsdir/$json
     done
 
-  done < $datadir/qc_participants.tsv
+  done < $qc_participants_tsv
   echo "]}" >> $reportsdir/$json
 done
 
@@ -322,7 +324,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   subject=${columns[0]}
   session=${columns[1]}
   gender=${columns[2]}
-  age=${columns[3]}
+  birth_ga=${columns[3]}
   if [ $subject = participant_id ]; then
     # header line
     continue
@@ -331,7 +333,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   cp $reportsdir/anatomical_${subject}.pdf \
     $derivatives_dir/sub-$subject/ses-$session/anat/sub-${subject}_ses-${session}_qc.pdf
 
-done < $datadir/qc_participants.tsv
+done < $qc_participants_tsv
 
 cp $reportsdir/anatomical_group.pdf $derivatives_dir/anat_group.pdf
 cp $reportsdir/anatomical_group_stats.pdf $derivatives_dir/anat_group_qc.pdf
