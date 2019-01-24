@@ -57,9 +57,9 @@ shift
 datadir="$( cd "$( dirname "$participants_tsv" )" && pwd )"
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/scripts
 derivatives_dir="$datadir/derivatives"
-reportsdir=$datadir/reports
-workdir=$reportsdir/workdir
-logdir=$datadir/logs
+reportsdir="$datadir/reports"
+workdir="$reportsdir/workdir"
+logdir="$datadir/logs"
 mkdir -p $logdir
 
 while [ $# -gt 0 ]; do
