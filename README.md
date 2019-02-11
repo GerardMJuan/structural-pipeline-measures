@@ -105,3 +105,10 @@ need to be included in the shell PATH by running:
 $ . [dHCP_structural_pipeline_path]/parameters/path.sh
 ```
 
+Then run with (eg.):
+
+```
+$ ./pipeline.sh ~/vol/dhcp-derived-data/derived_02Jun2018/participants.tsv --reporting
+```
+
+

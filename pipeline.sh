@@ -317,26 +317,3 @@ if [ ! $? -eq 0 ]; then
   exit 1
 fi
 
-
-echo "copying reports..."
-while IFS='' read -r line || [[ -n "$line" ]]; do
-  columns=($line)
-  subject=${columns[0]}
-  session=${columns[1]}
-  gender=${columns[2]}
-  birth_ga=${columns[3]}
-  if [ $subject = participant_id ]; then
-    # header line
-    continue
-  fi
-
-  cp $reportsdir/anatomical_${subject}.pdf \
-    $derivatives_dir/sub-$subject/ses-$session/anat/sub-${subject}_ses-${session}_qc.pdf
-
-done < $qc_participants_tsv
-
-cp $reportsdir/anatomical_group.pdf $derivatives_dir/anat_group.pdf
-cp $reportsdir/anatomical_group_stats.pdf $derivatives_dir/anat_group_qc.pdf
-cp $reportsdir/pipeline_all_measures.csv $derivatives_dir/anat_group_measurements.csv
-
-echo "completed QC reports"
