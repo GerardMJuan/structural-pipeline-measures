@@ -65,7 +65,7 @@ reportsdir="$datadir/reports"
 mkdir -p $reportsdir
 qc_participants_tsv="$reportsdir/qc_participants.tsv"
 workdir="$reportsdir/workdir"
-mdkir -p $workdir
+mkdir -p $workdir  # Fixed typo from mdkir to mkdir
 logdir="$datadir/logs"
 mkdir -p $logdir
 
@@ -109,25 +109,42 @@ fi
 echo -e "participant_id\tsession_id\tbirth_ga" \
   > $qc_participants_tsv
 
-while IFS='' read -r line || [[ -n "$line" ]]; do
-  columns=($line)
-  subject=${columns[0]}
-  # gender=${columns[1]}
-  birth_ga=${columns[1]}
-  if [ $subject = participant_id ]; then
-    # header line
-    continue
+# Read the header to determine column indices
+header=$(head -n 1 $participants_tsv)
+IFS=$'\t' read -r -a header_cols <<< "$header"
+
+# Find column indices
+subject_idx=-1
+birth_ga_idx=-1
+
+for i in "${!header_cols[@]}"; do
+  if [ "${header_cols[$i]}" = "participant_id" ]; then
+    subject_idx=$i
+  elif [ "${header_cols[$i]}" = "birth_ga" ] || [ "${header_cols[$i]}" = "gestational_weeks" ]; then
+    birth_ga_idx=$i
   fi
+done
+
+# Check if required columns were found
+if [ $subject_idx -eq -1 ]; then
+  echo "Error: 'participant_id' column not found in $participants_tsv"
+  exit 1
+fi
+
+if [ $birth_ga_idx -eq -1 ]; then
+  echo "Error: Neither 'birth_ga' nor 'gestational_weeks' column found in $participants_tsv"
+  exit 1
+fi
+
+# Skip the header line and process each participant
+tail -n +2 $participants_tsv | while IFS=$'\t' read -r -a line; do
+  subject="${line[$subject_idx]}"
+  birth_ga="${line[$birth_ga_idx]}"
 
   if [ ! -d $derivatives_dir/$subject ]; then
     echo $subject not found $derivatives_dir/$subject 
     continue
   fi
-
-  # if [ $gender != Male ] && [ $gender != Female ]; then
-  #   echo $subject bad gender $gender
-  #   continue
-  # fi
 
   if ! [[ $birth_ga =~ ^[0-9]+\.[0-9]+$ ]]; then
     echo $subject bad birth_ga $birth_ga
@@ -143,9 +160,13 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
       continue
     fi
 
-    # changed to T2 because fetal T1s are not available
-    T2=${subject}_ses-${session}_T2w.nii.gz
-    if [ ! -f $derivatives_dir/$subject/ses-$session/anat/T2/$T2 ]; then
+    # More flexible T2 file matching - looks for any file that starts with subject_ses-session
+    # and ends with _T2w.nii.gz, with any string in between
+    T2_path=$derivatives_dir/$subject/ses-$session/anat/T2/
+    T2_pattern="${subject}_ses-${session}_*T2w.nii.gz"
+    T2_file=$(find $T2_path -maxdepth 1 -name "$T2_pattern" | head -n 1)
+    
+    if [ -z "$T2_file" ]; then
       echo $subject no T2 for session $session
       continue
     fi
@@ -155,8 +176,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 
   done
 
-done < $participants_tsv
-
+done
 
 ################ MEASURES PIPELINE ################
 
