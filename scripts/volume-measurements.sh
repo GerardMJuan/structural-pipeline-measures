@@ -17,6 +17,17 @@ run(){
   fi
 }
 
+all_labels_file=$anatDir/segmentations/${subj}_all_labels.nii.gz
+tissue_labels_file=$anatDir/segmentations/${subj}_tissue_labels.nii.gz
+if [ ! -f $all_labels_file ]; then
+  echo "all labels file not found: $all_labels_file"
+  exit 1
+fi
+if [ ! -f $tissue_labels_file ]; then
+  echo "tissue labels file not found: $tissue_labels_file"
+  exit 1
+fi
+
 super_vol=""
 super_all_vol=""
 if [ "$super" != "" ];then 
@@ -24,7 +35,7 @@ if [ "$super" != "" ];then
   for s in ${supstructures};do
     for col in {2..5};do
       substructures=`cat $super | grep "^$s "|cut -d' ' -f $col`
-      run mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz `echo $substructures | wc -w` $substructures 0 -invert
+      run mirtk padding $all_labels_file $all_labels_file $outpre-temp.nii.gz `echo $substructures | wc -w` $substructures 0 -invert
       if [ ! -f $outpre-temp.nii.gz ]; then
 	      echo output not found
 	      echo pwd = $PWD
@@ -39,18 +50,18 @@ if [ "$super" != "" ];then
   done
 fi
 
-run mirtk padding $anatDir/${subj}_drawem_all_labels.nii.gz $anatDir/${subj}_drawem_all_labels.nii.gz $outpre-temp.nii.gz 4 49 50 83 84 0
+run mirtk padding $all_labels_file $all_labels_file $outpre-temp.nii.gz 4 49 50 83 84 0
 vol=`fslstats $outpre-temp.nii.gz -V|cut -d' ' -f2`
 echo $vol > $outpre-volume
 rm $outpre-temp.nii.gz
 
-line=`mirtk measure-volume $anatDir/${subj}_drawem_tissue_labels.nii.gz |cut -d' ' -f2`
+line=`mirtk measure-volume $tissue_labels_file |cut -d' ' -f2`
 line=`echo $line`; 
 echo "$line"  > $outpre-volume-tissue-regions
 rline=""; for l in ${line};do rline=$rline`echo "scale=5;$l/$vol"|bc`" ";done
 echo $rline > $outpre-rel-volume-tissue-regions
 
-line=`mirtk measure-volume $anatDir/${subj}_drawem_all_labels.nii.gz |cut -d' ' -f2` 
+line=`mirtk measure-volume $all_labels_file |cut -d' ' -f2 | awk '{for(i=1;i<=87;i++) printf "%s ", $i; print ""}'` 
 line=`echo $line`"$super_all_vol"
 echo "$line" > $outpre-volume-all-regions
 rline=""; for l in ${line};do rline=$rline`echo "scale=5;$l/$vol"|bc`" ";done

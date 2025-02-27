@@ -53,20 +53,21 @@ done
 mkdir -p $datadir
 cd $datadir
 
-subj=sub-${subjectID}_ses-${sessionID}
+subj=${subjectID}_ses-${sessionID}_T2w
 outdir=$subj
 mkdir -p $outdir/temp logs
 
 
 rage=`printf "%.*f\n" 0 $age`
-if [ -f $anatDir/${subj}_T2w.nii.gz ];then T2ex="True"; else T2ex="False"; fi
-if [ -f $anatDir/${subj}_T1w.nii.gz  ];then T1ex="True"; else T1ex="False"; fi
+if [ -f $anatDir/${subj}.nii.gz ];then T2ex="True"; else T2ex="False"; fi
+if [ -f $anatDir/${subj}.nii.gz  ];then T1ex="True"; else T1ex="False"; fi
 
 if [ ! -f $outdir/dhcp-measurements.json ];then 
+    tissues=$anatDir/segmentations/${subj}_tissue_labels.nii.gz
 
     # prepare files
-    if [ -f $anatDir/${subj}_T2w.nii.gz -o -f $anatDir/${subj}_T1w.nii.gz ];then
-      run mirtk padding $anatDir/${subj}_drawem_tissue_labels.nii.gz $anatDir/${subj}_drawem_tissue_labels.nii.gz $outdir/temp/tissue_labels.nii.gz 1 0 -1 1 4 0
+    if [ -f $anatDir/${subj}.nii.gz -o -f $anatDir/${subj}_T1w.nii.gz ];then
+      run mirtk padding $tissues $tissues $outdir/temp/tissue_labels.nii.gz 1 0 -1 1 4 0
       #masks
       thr=0
       for t in "bg" csf gm wm;do 
@@ -82,16 +83,17 @@ if [ ! -f $outdir/dhcp-measurements.json ];then
     fi
 
     # T2 QC measures
-    if [ -f $anatDir/${subj}_T2w.nii.gz ];then
+    if [ -f $anatDir/${subj}.nii.gz ];then
       if [ ! -f $outdir/T2-qc-measurements.json ];then 
-        cp $anatDir/${subj}_T2w_biasfield.nii.gz $outdir/temp/T2_bias.nii.gz
-        run mirtk convert-image $anatDir/${subj}_T2w_restore.nii.gz $outdir/temp/T2.nii.gz -rescale 0 1000
-        run fslmaths $outdir/temp/T2.nii.gz -mul $anatDir/${subj}_brainmask_bet.nii.gz $outdir/temp/T2_restore_brain.nii.gz
+        cp $anatDir/restore/T2/${subj}_bias.nii.gz $outdir/temp/T2_bias.nii.gz
+        run mirtk convert-image $anatDir/restore/T2/${subj}_restore.nii.gz $outdir/temp/T2.nii.gz -rescale 0 1000
+        # run fslmaths $outdir/temp/T2.nii.gz -mul $anatDir/${subj}_brainmask_bet.nii.gz $outdir/temp/T2_restore_brain.nii.gz
+        cp $anatDir/restore/T2/${subj}_restore_brain.nii.gz $outdir/temp/T2_restore_brain.nii.gz
         $scriptdir/image-QC-measurements.sh $outdir/temp T2 $subjectID $sessionID $anatDir/${subj}_T2w.nii.gz $outdir/T2-qc-measurements.json
       fi
     else
       echo "{\"subject_id\":\"$subjectID\", \"session_id\":\"$sessionID\", \"run_id\":\"T2\", \"exists\":\"$T2ex\", \"reorient\":\"\" }" > $outdir/T2-qc-measurements.json
-      if [ "$T2ex" == "True" ];then echo "Could not find $anatDir/${subj}_T2w.nii.gz!!!";fi
+      if [ "$T2ex" == "True" ];then echo "Could not find $anatDir/${subj}.nii.gz!!!";fi
     fi
 
     # T1 QC measures
@@ -122,11 +124,11 @@ if [ ! -f $outdir/dhcp-measurements.json ];then
     gyrification_index=''
     thickness=''
 
-    if [ -f $anatDir/${subj}_T2w.nii.gz ];then 
+    if [ -f $anatDir/${subj}.nii.gz ];then 
       inputOK="True"
-      if [ -f $anatDir/${subj}_drawem_all_labels.nii.gz ];then segOK="True";fi
-      if [ -f $anatDir/Native/${subj}_left_sphere.surf.gii ];then LhemiOK="True"; else QCOK='False';fi
-      if [ -f $anatDir/Native/${subj}_right_sphere.surf.gii ];then RhemiOK="True"; else QCOK='False';fi
+      if [ -f $anatDir/segmentations/${subj}_all_labels.nii.gz ];then segOK="True";fi
+      if [ -f $anatDir/surfaces/${subj}/workbench/${subj}.L.sphere.native.surf.gii ];then LhemiOK="True"; else QCOK='False';fi
+      if [ -f $anatDir/surfaces/${subj}/workbench/${subj}.R.sphere.native.surf.gii ];then RhemiOK="True"; else QCOK='False';fi
 
       # additional measures
       volume_brain=`cat $outdir//$subj-volume 2>/dev/null`

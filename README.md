@@ -40,6 +40,14 @@ $ docker run --rm -t -v $PWD/data:/data \
         /data/participants.tsv --reporting
 ```
 
+docker run --rm -t -v /DATA/test_measures:/data -u $(id -u):$(id -g) registry.sb.upf.edu/simbiosys/structural-pipeline-measures:latest /data/participants.tsv nesvor-dhcp --reporting
+
+
+
+docker run --rm -t -v /media/gerard/HDD/VM_BIDS:/data -u $(id -u):$(id -g) gerardmartijuan/structural-pipeline-measures:latest /data/participants.tsv recon-dhcp --reporting
+
+
+
 This will mount the subdirectory `data` of
 your current directory as `/data` in the container, then execute the tool
 on the output of `dhcp-structural-pipeline` in that directory. 

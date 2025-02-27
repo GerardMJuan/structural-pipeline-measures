@@ -69,23 +69,12 @@ echo "----------------------------
 echo "computing QC measures..."
 $scriptdir/compute-QC-measurements.sh $subjectID $sessionID $age $anatDir -d $datadir 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 datadir=`pwd`
 threads=1
+
 if [ $# -ge 1 ];then datadir=$1; fi
-if [ $# -ge 2 ];then threads=$2; fi
+if [ $# -ge 2 ];then derivatives=$2; fi
+if [ $# -ge 3 ];then threads=$3; fi
 
 scriptdir=$(dirname "$BASH_SOURCE")
 

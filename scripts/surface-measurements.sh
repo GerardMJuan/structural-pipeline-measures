@@ -15,9 +15,12 @@ fi
 
 
 A=`mirtk info $f -area | grep "surface area" |cut -d':' -f2 |tr -d ' '`
+echo "Surface area: $A"
 # V=`polydatavolume $hull`
 V=`mirtk info $hull -area | grep volume | tr -d ' ' | cut -d':' -f2`
+echo "Volume: $V"
 T=`perl -e 'use Math::Trig;print ( ( 3*$ARGV[0]/(4*pi) ) ** (1/3))' $V`
+echo "T value: $T"
 
 corts=`cat $DRAWEMDIR/parameters/cortical.csv`
 num_orig_corts=`echo $corts| wc -w`
@@ -26,10 +29,6 @@ if [ "$super" != "" ];then
   # $s-2 means second column of super structure $s
   for s in ${supstructures};do corts="$corts $s-2 $s-3";done
 fi
-
-
-
-
 
 r=0
 for l in 0 ${corts};do

@@ -64,15 +64,13 @@ echo ""
 mkdir -p $datadir
 cd $datadir
 
-subj=sub-${subjID}_ses-${sessionID}
-surfdir=$anatDir/Native
+subj=${subjID}_ses-${sessionID}_T2w
+surfdir=$anatDir/surfaces/${subj}/workbench
 rdir=surfaces
 
 mkdir -p $rdir $subj
 
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-
 
 # do the volume-based measurements
 super_structures=$scriptdir/../label_names/super-structures.csv
@@ -82,56 +80,56 @@ if [ ! -f $subj/$subj-rel-volume-all-regions ]; then
 fi
 
 if [ ! -f $subj/$subj-curvature-regions ]; then 
-  if [ ! -f $surfdir/${subj}_left_white.surf.gii ]; then 
-    echo "file $surfdir/${subj}_left_white.surf.gii not found"
+  if [ ! -f $surfdir/${subj}.L.white.native.surf.gii ]; then 
+    echo "file $surfdir/${subj}.L.white.native.surf.gii not found"
     echo "The left WM surface for subject $subj doesn't exist"
     exit
   fi
 
-  if [ ! -f $surfdir/${subj}_right_white.surf.gii ]; then 
-    echo "file $surfdir/${subj}_right_white.surf.gii not found"
+  if [ ! -f $surfdir/${subj}.L.white.native.surf.gii ]; then 
+    echo "file $surfdir/${subj}.R.white.native.surf.gii not found"
     echo "The right WM surface for subject $subj doesn't exist"
     exit
   fi
 
   # gather all measurements into a single file
   if [ ! -f $rdir/${subj}_white.surf.vtk ];then
-    for h in left right;do
+    for h in L R;do
       if [ ! -f $rdir/${subj}_${h}_white.surf.vtk ];then
         # copy surface
         tmpsurf=$rdir/${subj}_${h}_white.surf-temp.vtk
-        run mirtk convert-pointset $surfdir/${subj}_${h}_white.surf.gii $tmpsurf
+        run mirtk convert-pointset $surfdir/${subj}.${h}.white.native.surf.gii $tmpsurf
 
         # copy metrics
         for m in curvature thickness sulc drawem;do
           if [ "$m" == "drawem" ];then mtype=label;else mtype=shape;fi
-          run mirtk copy-pointset-attributes $surfdir/${subj}_${h}_${m}.$mtype.gii $tmpsurf $tmpsurf -pointdata 0 $m
+          run mirtk copy-pointset-attributes $surfdir/${subj}.${h}.${m}.native.$mtype.gii $tmpsurf $tmpsurf -pointdata 0 $m
         done
 
         run mv $tmpsurf $rdir/${subj}_${h}_white.surf.vtk
       fi
     done
 
-    run mirtk convert-pointset $rdir/${subj}_left_white.surf.vtk $rdir/${subj}_right_white.surf.vtk $rdir/${subj}_white.surf.vtk
-    rm $rdir/${subj}_left_white.surf.vtk $rdir/${subj}_right_white.surf.vtk
+    run mirtk convert-pointset $rdir/${subj}_L_white.surf.vtk $rdir/${subj}_R_white.surf.vtk $rdir/${subj}_white.surf.vtk
+    rm $rdir/${subj}_L_white.surf.vtk $rdir/${subj}_R_white.surf.vtk
   fi
 
   # project labels to pial
   if [ ! -f $rdir/${subj}_pial.surf.vtk ];then
-    for h in left right;do
-      run mirtk copy-pointset-attributes $surfdir/${subj}_${h}_drawem.label.gii $surfdir/${subj}_${h}_pial.surf.gii $rdir/${subj}_${h}_pial.surf.vtk -pointdata 0 drawem
+    for h in L R;do
+      run mirtk copy-pointset-attributes $surfdir/${subj}.${h}.drawem.native.label.gii $surfdir/${subj}.${h}.pial.native.surf.gii $rdir/${subj}_${h}_pial.surf.vtk -pointdata 0 drawem
     done
-    run mirtk convert-pointset $rdir/${subj}_left_pial.surf.vtk $rdir/${subj}_right_pial.surf.vtk $rdir/${subj}_pial.surf.vtk
+    run mirtk convert-pointset $rdir/${subj}_L_pial.surf.vtk $rdir/${subj}_R_pial.surf.vtk $rdir/${subj}_pial.surf.vtk
   fi
 
 
   # compute the convex hull
   if [ ! -f $rdir/${subj}_outerpial.surf.vtk ];then 
-    tissues=$anatDir/${subj}_drawem_tissue_labels.nii.gz
-    for h in left right;do
+    tissues=$anatDir/segmentations/${subj}_tissue_labels.nii.gz
+    for h in L R;do
       if [ ! -f $rdir/${subj}_${h}_outerpial.surf.vtk ];then
         # compute outside surface for GI
-        run wb_command -create-signed-distance-volume $surfdir/${subj}_${h}_pial.surf.gii $tissues $rdir/${subj}_${h}_dist.nii.gz
+        run wb_command -create-signed-distance-volume $surfdir/${subj}.${h}.pial.native.surf.gii $tissues $rdir/${subj}_${h}_dist.nii.gz
         run fslmaths $rdir/${subj}_${h}_dist.nii.gz -uthr 0 -abs -bin -mul $tissues -thr 2 -bin $rdir/${subj}_${h}_outerpial.nii.gz
         # smooth surface
         run mirtk dilate-image $rdir/${subj}_${h}_outerpial.nii.gz $rdir/${subj}_${h}_outerpial.nii.gz -iterations 3
@@ -142,8 +140,8 @@ if [ ! -f $subj/$subj-curvature-regions ]; then
         run rm $rdir/${subj}_${h}_outerpial.nii.gz $rdir/${subj}_${h}_outerpial.surf-temp.vtk
       fi
     done  
-    run mirtk convert-pointset $rdir/${subj}_left_outerpial.surf.vtk $rdir/${subj}_right_outerpial.surf.vtk $rdir/${subj}_outerpial.surf.vtk
-    run rm $rdir/${subj}_left_outerpial.surf.vtk $rdir/${subj}_right_outerpial.surf.vtk $rdir/${subj}_left_pial.surf.vtk $rdir/${subj}_right_pial.surf.vtk
+    run mirtk convert-pointset $rdir/${subj}_L_outerpial.surf.vtk $rdir/${subj}_R_outerpial.surf.vtk $rdir/${subj}_outerpial.surf.vtk
+    run rm $rdir/${subj}_L_outerpial.surf.vtk $rdir/${subj}_R_outerpial.surf.vtk $rdir/${subj}_L_pial.surf.vtk $rdir/${subj}_R_pial.surf.vtk
   fi
 
   # measure GI

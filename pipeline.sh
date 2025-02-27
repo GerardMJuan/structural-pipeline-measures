@@ -4,7 +4,7 @@
 
 # if DRAWEMDIR is not defined, assume we need to read the pipeline params 
 if [ -z ${DRAWEMDIR+x} ]; then
-  . /usr/src/structural-pipeline/parameters/path.sh
+  . /usr/local/src/structural-pipeline/parameters/path.sh
 fi
 
 # if FSLDIR is not defined, assume we need to read the FSL startup
@@ -28,11 +28,13 @@ pipeline and, if requested, creates pdf reports for the subjects (option
 
 Arguments:
   participants.tsv              A tab-separated values file containing columns
-                                for participant_id, gender and birth_ga in weeks.
+                                for participant_id and birth_ga in weeks.
 
                                 The participants.tsv must be in the same
                                 directory as the derivatives directory made by
                                 the structural pipeline.
+  derivatives_dir               The name of the derivatives directory made by
+                                the structural pipeline. Must be inside data/derivatives
 
 Options:
   --reporting                   The script will additionally create a pdf 
@@ -53,13 +55,17 @@ QC=0
 threads=1
 command="$@"
 participants_tsv="$1"
+derivatives_dir="$2"
+shift
 shift
 datadir="$( cd "$( dirname "$participants_tsv" )" && pwd )"
 scriptdir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"/scripts
-derivatives_dir="$datadir/derivatives"
+derivatives_dir="$datadir/derivatives/$derivatives_dir"
 reportsdir="$datadir/reports"
+mkdir -p $reportsdir
 qc_participants_tsv="$reportsdir/qc_participants.tsv"
 workdir="$reportsdir/workdir"
+mdkir -p $workdir
 logdir="$datadir/logs"
 mkdir -p $logdir
 
@@ -100,51 +106,51 @@ fi
 
 ################ CHECK PARTICIPANTS ################
 
-echo -e "participant_id\tsession_id\tgender\tbirth_ga" \
+echo -e "participant_id\tsession_id\tbirth_ga" \
   > $qc_participants_tsv
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
-  gender=${columns[1]}
-  birth_ga=${columns[2]}
+  # gender=${columns[1]}
+  birth_ga=${columns[1]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
-  if [ ! -d $derivatives_dir/sub-$subject ]; then
-    echo $subject not found $derivatives_dir/sub-$subject 
+  if [ ! -d $derivatives_dir/$subject ]; then
+    echo $subject not found $derivatives_dir/$subject 
     continue
   fi
 
-  if [ $gender != Male ] && [ $gender != Female ]; then
-    echo $subject bad gender $gender
-    continue
-  fi
+  # if [ $gender != Male ] && [ $gender != Female ]; then
+  #   echo $subject bad gender $gender
+  #   continue
+  # fi
 
   if ! [[ $birth_ga =~ ^[0-9]+\.[0-9]+$ ]]; then
     echo $subject bad birth_ga $birth_ga
     continue
   fi
 
-  for session_path in $derivatives_dir/sub-$subject/ses-*; do
+  for session_path in $derivatives_dir/$subject/ses-*; do
     ses_session=$(basename $session_path)
     session=${ses_session#ses-}
 
-    if [ ! -d $derivatives_dir/sub-$subject/ses-$session ]; then
-      echo $subject not found $derivatives_dir/sub-$subject/ses-$session 
+    if [ ! -d $derivatives_dir/$subject/ses-$session ]; then
+      echo $subject not found $derivatives_dir/$subject/ses-$session 
       continue
     fi
 
-
-    T1=sub-${subject}_ses-${session}_T1w.nii.gz
-    if [ ! -f $derivatives_dir/sub-$subject/ses-$session/anat/$T1 ]; then
-      echo $subject no T1 for session $session
+    # changed to T2 because fetal T1s are not available
+    T2=${subject}_ses-${session}_T2w.nii.gz
+    if [ ! -f $derivatives_dir/$subject/ses-$session/anat/T2/$T2 ]; then
+      echo $subject no T2 for session $session
       continue
     fi
 
-    echo -e "${subject}\t${session}\t${gender}\t${birth_ga}" \
+    echo -e "${subject}\t${session}\t${birth_ga}" \
       >> $qc_participants_tsv
 
   done
@@ -160,15 +166,15 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
   session=${columns[1]}
-  gender=${columns[2]}
-  birth_ga=${columns[3]}
+  # gender=${columns[2]}
+  birth_ga=${columns[2]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
   cmd="$scriptdir/compute-measurements.sh $subject $session \
-        $derivatives_dir/sub-$subject/ses-$session/anat \
+        $derivatives_dir/$subject/ses-$session/anat \
         -d $workdir"
   echo $cmd
   $cmd > $logdir/$subject-$session-measures.log \
@@ -215,18 +221,17 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
   session=${columns[1]}
-  gender=${columns[2]}
-  birth_ga=${columns[3]}
+  birth_ga=${columns[2]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
-  subj="sub-${subject}_ses-$session"
+  subj="${subject}_ses-${session}_T2w"
   line="$subject,$session,$birth_ga"
   for c in ${stats};do
-    if [ -f $workdir/$subject/$subject-$c ]; then 
-      line="$line,"`cat $workdir/$subject/$subject-$c |sed -e 's: :,:g' `
+    if [ -f $workdir/$subj/$subj-$c ]; then 
+      line="$line,"`cat $workdir/$subj/$subj-$c |sed -e 's: :,:g' `
     fi
   done
   echo "$line" |sed -e 's: :,:g' >> $measfile
@@ -252,17 +257,17 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
   columns=($line)
   subject=${columns[0]}
   session=${columns[1]}
-  gender=${columns[2]}
-  birth_ga=${columns[3]}
+  # gender=${columns[2]}
+  birth_ga=${columns[2]}
   if [ $subject = participant_id ]; then
     # header line
     continue
   fi
 
-  subj="sub-${subject}_ses-$session"
+  subj="${subject}_ses-$session_T2w"
 
   cmd="$scriptdir/compute-QC-measurements.sh $subject $session $birth_ga \
-        $derivatives_dir/sub-$subject/ses-$session/anat -d $workdir"
+        $derivatives_dir/$subject/ses-$session/anat -d $workdir"
   echo $cmd
   $cmd \
         >> $logdir/$subject-$session-measures.log \
@@ -281,14 +286,14 @@ for json in dhcp-measurements.json qc-measurements.json; do
     columns=($line)
     subject=${columns[0]}
     session=${columns[1]}
-    gender=${columns[2]}
-    birth_ga=${columns[3]}
+    # gender=${columns[2]}
+    birth_ga=${columns[2]}
     if [ $subject = participant_id ]; then
       # header line
       continue
     fi
 
-    files=`ls $workdir/sub-${subject}_ses-${session}/*$json`
+    files=`ls $workdir/${subject}_ses-${session}_T2w/*$json`
     for f in $files; do 
       line=`cat $f`
       if [ $first -eq 1 ]; then 
