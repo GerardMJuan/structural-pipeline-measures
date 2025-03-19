@@ -230,9 +230,47 @@ int main(int argc, char **argv)
     }
   }
 
+  // Replace the current code block around line 201:
   if (count < 1){
-  	cerr << "Zero points remain after masking, exiting " << endl;
-  	exit(0);
+    // Instead of exiting with error, output placeholder values
+    if (quiet){
+      cout << noOfPoints;
+      cout << " 0";  // count
+      cout << " -1";  // median
+      cout << " -1";  // mean
+      cout << " -1";  // meanSq
+      cout << " -1";  // sd
+      cout << " -1";  // meanAbs
+      cout << " -1";  // sdAbs
+      cout << " -1 -1";  // minVal maxVal
+      cout << " 0";  // totalArea
+      cout << " -1";  // avgIntegral
+      cout << " -1";  // integral
+      cout << " -1";  // sqrtIntegral
+      cout << " -1";  // normedIntegral
+      cout << endl;
+    } else {
+      cout << "Scalar name         : " << (scalars ? scalars->GetName() : "unknown") << endl;
+      cout << "Number of points    : " << noOfPoints << endl;
+      cout << "After masking       : 0" << endl;
+      cout << "Median              : -1" << endl;
+      cout << "Mean                : -1" << endl;
+      cout << "Mean Sq             : -1" << endl;
+      cout << "S.D.                : -1" << endl;
+      cout << "Mean(abs)           : -1" << endl;
+      cout << "S.D(abs)            : -1" << endl;
+      cout << "Min/Max             : -1 -1" << endl;
+      cout << "Area                : 0" << endl;
+      cout << "int                 : -1" << endl;
+      cout << "Area int            : -1" << endl;
+      cout << "sqrt(Area int)      : -1" << endl;
+      cout << "sqrt(Area int/4 pi) : -1" << endl;
+      if (nonTriangleFaces > 0)
+        cout << "Non Triangle Faces  : " << nonTriangleFaces << endl;
+      cout << "" << "" << endl;
+    }
+    delete [] mask;
+    return 0;
   }
 
   mean    = sum / ((double) count);
@@ -252,9 +290,6 @@ int main(int argc, char **argv)
   
   sort( vals.begin(), vals.end() );
   double median= vals[floor(vals.size()/2)];
-
-
-
 
   if (quiet){
     //cout << ""  << scalars->GetName();

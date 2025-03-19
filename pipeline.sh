@@ -215,6 +215,7 @@ stats="
   sulc sulc-regions curvature curvature-regions GI GI-regions surface-area 
   surface-area-regions rel-surface-area-regions
 "
+
 typeset -A name
 
 # header
