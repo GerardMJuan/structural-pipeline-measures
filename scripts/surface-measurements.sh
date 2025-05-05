@@ -43,20 +43,35 @@ for l in 0 ${corts};do
 
   #thickness
   Th=`surface-scalar-statistics $f $mask -name thickness      |grep "^Median  "|tr -d ' ' |cut -d':' -f 2 | sed -e 's/[eE]+*/\\*10\\^/'`
-  Thl[$r]=$Th
+  if [ "$Th" == "" ];then 
+    Thl[$r]="-";
+  else
+    Thl[$r]=$Th
+  fi
 
   #sulcation
   Su=`surface-scalar-statistics $f $mask -name sulc    |grep "^Median  "|tr -d ' ' |cut -d':' -f 2 | sed -e 's/[eE]+*/\\*10\\^/'`
-  Sul[$r]=`echo "scale=5;$Su*$T"|bc`
-
+  if [ "$Su" == "" ];then 
+    Sul[$r]="-";
+  else
+    Sul[$r]=`echo "scale=5;$Su*$T"|bc`
+  fi
   #surface area
   Sa=`surface-scalar-statistics $f $mask -name sulc    |grep "^Area  "  |tr -d ' ' |cut -d':' -f 2 | sed -e 's/[eE]+*/\\*10\\^/'`
-  Sal[$r]=$Sa
-  Sarl[$r]=`echo "scale=5;$Sa/$A"|bc`
-
+  if [ "$Sa" == "" ];then 
+    Sul[$r]="-";
+    Sarl[$r]="-";
+  else
+    Sal[$r]=$Sa
+    Sarl[$r]=`echo "scale=5;$Sa/$A"|bc`
+  fi
   #curvature
   Mc=`surface-scalar-statistics $f $mask -name curvature  |grep "^Median  "|tr -d ' ' |cut -d':' -f 2 | sed -e 's/[eE]+*/\\*10\\^/'`
-  Mcl[$r]=`echo "scale=5;$Mc*$T"|bc`
+  if [ "$Mc" == "" ];then 
+    Mcl[$r]="-";
+  else
+    Mcl[$r]=`echo "scale=5;$Mc*$T"|bc`
+  fi
 
   let r=r+1
 done
