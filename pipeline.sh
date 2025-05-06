@@ -164,7 +164,7 @@ tail -n +2 $participants_tsv | while IFS=$'\t' read -r -a line; do
     # and ends with _T2w.nii.gz, with any string in between
     T2_path=$derivatives_dir/$subject/ses-$session/anat/T2/
     T2_pattern="${subject}_ses-${session}_*T2w.nii.gz"
-    T2_file=$(find $T2_path -maxdepth 1 -name "$T2_pattern" | head -n 1)
+    T2_file=$(find $T2_path -maxdepth 2 -name "$T2_pattern" | head -n 1)
     
     if [ -z "$T2_file" ]; then
       echo $subject no T2 for session $session

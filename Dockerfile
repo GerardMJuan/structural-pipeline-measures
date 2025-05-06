@@ -12,14 +12,14 @@
 ##
 
 FROM gerardmartijuan/dhcp-pipeline-multifact:latest
-MAINTAINER John Cupitt <jcupitt@gmail.com>
+# MAINTAINER John Cupitt <jcupitt@gmail.com>
 LABEL Description="dHCP structural-pipeline measure and report" Vendor="BioMedIA"
 
 # Git repository and commit SHA from which this Docker image was built
 # (see https://microbadger.com/#/labels)
 ARG VCS_REF
 LABEL org.label-schema.vcs-ref=$VCS_REF \
-      org.label-schema.vcs-url="https://github.com/jcupitt/structural-pipeline-measures"
+      org.label-schema.vcs-url="https://github.com/gerardmjuan/structural-pipeline-measures"
 
 # Update package lists and install necessary tools
 RUN apt-get update && apt-get install -y \
